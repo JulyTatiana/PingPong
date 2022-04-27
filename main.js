@@ -19,10 +19,35 @@
         //Esto es un json que puede contener diferentes funciones y métodos para mi prototipo
         get elements (){
             var elements = this.bars;
-            elements.push(ball); //¿Qué es .push en JS? El método push() añade uno o más elementos al final de un array y devuelve la nueva longitud del array
+            elements.push(this.ball); //¿Qué es .push en JS? El método push() añade uno o más elementos al final de un array y devuelve la nueva longitud del array
             return elements;
         }
     }
+})();
+
+//nueva función autoejecutable
+(function(){
+    //declaramos nueva clase
+    self.Bar = function(x,y,width,height,board){
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.board = board;
+        this.board.bars.push(this); // en el constructor de la barra llenamos el arreglo this.bars = []; con bars,push(this)
+        this.kind = "rectangle"; //Para que el canvas sepa cómo dibujarlo
+        console.log("Hola mundo primero");
+    }
+    //ahora vamos a modificar el prototype de esta función
+    self.Bar.prototype = {
+        down: function(){
+
+        },
+        up: function(){
+
+        }
+    }
+
 })();
 
 (funtion(){
@@ -32,12 +57,43 @@
         this.canvas.height = board.height;
         this.board = board;
         this.ctx = canvas.getContext("2d"); //Este es el objeto a través del cual podemos dibujar en Js, donde getContext es el método 
-    }  
+    }
+
+    self.BoardView.prototype = {
+        draw: function(){
+            for (var i = this.board.elements.length -1; i >= 0; i--){
+                var el = this.board.elements[i];
+
+                draw(this.ctx,el);
+            };
+        }
+    }
+
+    //helper methods no pertenecen al scope del objeto, 
+    function draw(ctx, element){
+        if(element !== null && element.hasOwnProperty("kind")){
+            //hasOwnProperty nos dice si el objeto tiene una propiedad kind, para poder acceder luego a ella
+            switch(element.kind){
+                case "rectangle":
+                    console.log("Hola mundo :3")
+                    //fillReact es una función del contexto que nos permite dibujar un cuadro, que recibe como primer parámetro el .x y luego el .y
+                    ctx.fillRect(element.x,element.y,element.width,element.height);
+                    break;
+            }
+        }
+        
+    }
 })();
 
-window.addEventListener("load", main);
+self.addEventListener("load", main);
+
 function main() {
+    console.log("Hola mundo");
     var board = new Board(800, 400);
+    var bar = new Bar(20,100,40,100,board);
+    var bar = new Bar(700,100,40,100,board);
     var canvas = document.getElementById('canvas');
     var board_view = new BoardView(canvas, board);
+    console.log(board);
+    board_view.draw(); //dibuja todos los elementos
 }
