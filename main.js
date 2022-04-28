@@ -37,20 +37,24 @@
         this.board.bars.push(this); // en el constructor de la barra llenamos el arreglo this.bars = []; con bars,push(this)
         this.kind = "rectangle"; //Para que el canvas sepa cómo dibujarlo
         console.log("Hola mundo primero");
+        this.speed = 10;
     }
     //ahora vamos a modificar el prototype de esta función
     self.Bar.prototype = {
         down: function(){
-
+            this.y += this.speed;
         },
         up: function(){
-
+            this.y -= this.speed;
+        },
+        toString: function(){ //Método string
+            return "x: "+ this.x + "y: " + this.y ;
         }
     }
 
 })();
 
-(funtion(){
+(function(){
     self.BoardView = function(canvas, board){
         this.canvas = canvas;
         this.canvas.width = board.width;
@@ -75,7 +79,6 @@
             //hasOwnProperty nos dice si el objeto tiene una propiedad kind, para poder acceder luego a ella
             switch(element.kind){
                 case "rectangle":
-                    console.log("Hola mundo :3")
                     //fillReact es una función del contexto que nos permite dibujar un cuadro, que recibe como primer parámetro el .x y luego el .y
                     ctx.fillRect(element.x,element.y,element.width,element.height);
                     break;
@@ -85,15 +88,30 @@
     }
 })();
 
+var board = new Board(800, 400);
+var bar = new Bar(20,100,40,100,board);
+var bar = new Bar(735,100,40,100,board);
+var canvas = document.getElementById('canvas');
+var board_view = new BoardView(canvas, board);
+
+//a través de document accedemos al DOM, una vez que el que Keydown suceda se va a ejecutar la función(ev)
+document.addEventListener("keydown", function(ev){
+    //me trae información del evento
+    if(ev.keyCode == 38){
+        bar.up();
+    }
+    else if(ev.keycode == 40){
+        bar.down();
+    }
+
+    console.log(""+bar);
+});
+
+
 self.addEventListener("load", main);
 
 function main() {
     console.log("Hola mundo");
-    var board = new Board(800, 400);
-    var bar = new Bar(20,100,40,100,board);
-    var bar = new Bar(700,100,40,100,board);
-    var canvas = document.getElementById('canvas');
-    var board_view = new BoardView(canvas, board);
     console.log(board);
     board_view.draw(); //dibuja todos los elementos
 }
