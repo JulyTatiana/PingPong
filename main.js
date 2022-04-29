@@ -1,117 +1,208 @@
-//function está dentro de una función anónima, que se va a ejecutar así misma.
-//para no contaminar el scope general del proyecto
-//Declaración de la clase, en js las clases son funciones especiales
-(function(){
-    //El function es como si estuviera declarando una clase
-    //Los parámetros del constructor son el ancho y el alto del tablero
-    self.Board = function(width, height){
-        //Los parámetros se asignan a variables de la clase
-        //Las variables width y height que son propiedades del objeto se iguala a lo que pasa como parámetro la persona (width, height)
+// Mesa de juego //
+ (function () {
+    self.Board = function (width, height) {
         this.width = width;
         this.height = height;
-        //Variables booleanas: el juego se está jugando, el juego se terminó
         this.playing = false;
         this.game_over = false;
         this.bars = [];
         this.ball = null;
-    }
+        this.playing = false;
+    };
+
     self.Board.prototype = {
-        //Esto es un json que puede contener diferentes funciones y métodos para mi prototipo
-        get elements (){
-            var elements = this.bars;
-            elements.push(this.ball); //¿Qué es .push en JS? El método push() añade uno o más elementos al final de un array y devuelve la nueva longitud del array
+        get elements() {
+            var elements = this.bars.map(function (bar) {
+                return bar;
+            });
+            elements.push(this.ball);
             return elements;
-        }
-    }
+        },
+    };
 })();
 
-//nueva función autoejecutable
-(function(){
-    //declaramos nueva clase
-    self.Bar = function(x,y,width,height,board){
+//Función dentro de la cual se define la bola y sus movimientos o acciones
+(function () {
+    self.Ball = function (x, y, radius, board) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.speed_y = 0;
+        this.speed_x = 4;
+        this.board = board;
+        this.direction = 1;
+        this.bounce_angle = 0;
+        this.max_bounce_angle = Math.PI / 12;
+        this.speed = 7;
+
+        board.ball = this;
+        this.kind = "circle";
+    };
+
+    self.Ball.prototype = {
+        move: function () {
+            this.x += this.speed_x * this.direction;
+            this.y += this.speed_y;
+        },
+        get width() {
+            return this.radius * 3;
+        },
+        get height() {
+            return this.radius * 3;
+        },
+
+        collision: function (bar) {
+            var relative_intersect_y = bar.y + bar.height / 2 - this.y;
+
+            var normalized_intersect_y = relative_intersect_y / (bar.height / 2);
+
+            this.bounce_angle = normalized_intersect_y * this.max_bounce_angle;
+
+            this.speed_y = this.speed * -Math.sin(this.bounce_angle);
+            this.speed_x = this.speed * Math.cos(this.bounce_angle);
+
+            if (this.x > this.board.width / 2) this.direction = -1;
+            else this.direction = 1;
+        },
+    };
+})();
+
+// Función para las barras laterales
+(function () {
+    self.Bar = function (x, y, width, height, board) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.board = board;
-        this.board.bars.push(this); // en el constructor de la barra llenamos el arreglo this.bars = []; con bars,push(this)
-        this.kind = "rectangle"; //Para que el canvas sepa cómo dibujarlo
-        console.log("Hola mundo primero");
-        this.speed = 10;
-    }
-    //ahora vamos a modificar el prototype de esta función
+        this.board.bars.push(this);
+        this.kind = "rectangle";
+        this.speed = 30;
+    };
+
     self.Bar.prototype = {
-        down: function(){
+        down: function () {
             this.y += this.speed;
         },
-        up: function(){
+        up: function () {
             this.y -= this.speed;
         },
-        toString: function(){ //Método string
-            return "x: "+ this.x + "y: " + this.y ;
-        }
-    }
-
+        toString: function () {
+            return "x: " + this.x + "y: " + this.y;
+        },
+    };
 })();
 
-(function(){
-    self.BoardView = function(canvas, board){
+// Función que muestra en pantalla el tablero de juego
+(function () {
+    self.BoardView = function (canvas, board) {
         this.canvas = canvas;
         this.canvas.width = board.width;
         this.canvas.height = board.height;
         this.board = board;
-        this.ctx = canvas.getContext("2d"); //Este es el objeto a través del cual podemos dibujar en Js, donde getContext es el método 
-    }
+        this.cxt = canvas.getContext("2d");
+    };
 
     self.BoardView.prototype = {
-        draw: function(){
-            for (var i = this.board.elements.length -1; i >= 0; i--){
+        clean: function () {
+            this.cxt.clearRect(0, 0, this.board.width, this.board.height);
+        },
+        draw: function () {
+            for (var i = this.board.elements.length - 1; i >= 0; i--) {
                 var el = this.board.elements[i];
 
-                draw(this.ctx,el);
-            };
+                draw(this.cxt, el);
+            }
+        },
+        check_collisions: function () {
+            for (var i = this.board.bars.length - 1; i >= 0; i--) {
+                var bar = this.board.bars[i];
+                if (hit(bar, this.board.ball)) {
+                    this.board.ball.collision(bar);
+                }
+            }
+        },
+        play: function () {
+            if (this.board.playing) {
+                this.clean();
+                this.draw();
+                this.check_collisions();
+                this.board.ball.move();
+            }
+        },
+    };
+    function hit(a, b) {
+        var hit = false;
+
+        if (b.x + b.width >= a.x && b.x < a.x + a.width) {
+            if (b.y + b.height >= a.y && b.y < a.y + a.height) hit = true;
         }
+
+        if (b.x <= a.x && b.x + b.width >= a.x + a.width) {
+            if (b.y <= a.y && b.y + b.height >= a.y + a.height) hit = true;
+        }
+
+        if (a.x <= b.x && a.x + a.width >= b.x + b.width) {
+            if (a.y <= b.y && a.y + a.height >= b.y + b.height) hit = true;
+        }
+        return hit;
     }
 
-    //helper methods no pertenecen al scope del objeto, 
-    function draw(ctx, element){
-        if(element !== null && element.hasOwnProperty("kind")){
-            //hasOwnProperty nos dice si el objeto tiene una propiedad kind, para poder acceder luego a ella
-            switch(element.kind){
-                case "rectangle":
-                    //fillReact es una función del contexto que nos permite dibujar un cuadro, que recibe como primer parámetro el .x y luego el .y
-                    ctx.fillRect(element.x,element.y,element.width,element.height);
-                    break;
-            }
+    function draw(cxt, element) {
+        switch (element.kind) {
+            case "rectangle":
+                cxt.fillRect(element.x, element.y, element.width, element.height);
+                break;
+
+            case "circle":
+                cxt.beginPath();
+                cxt.arc(element.x, element.y, element.radius, 0, 7);
+                cxt.fill();
+                cxt.closePath();
+                break;
         }
-        
     }
 })();
 
+//Definición de las dimensiones de las variables/objetos del juego
+
 var board = new Board(800, 400);
-var bar = new Bar(20,100,40,100,board);
-var bar = new Bar(735,100,40,100,board);
-var canvas = document.getElementById('canvas');
+var bar = new Bar(20, 150, 40, 100, board);
+var bar_2 = new Bar(735, 150, 40, 100, board);
+var canvas = document.getElementById("canvas");
 var board_view = new BoardView(canvas, board);
+var ball = new Ball(400, 200, 10, board);
 
-//a través de document accedemos al DOM, una vez que el que Keydown suceda se va a ejecutar la función(ev)
-document.addEventListener("keydown", function(ev){
-    //me trae información del evento
-    if(ev.keyCode == 38){
+// Evento para el movimiento de las barras con keyCode
+
+document.addEventListener("keydown", function (ev) {
+    if (ev.keyCode == 103) {
+        ev.preventDefault();
         bar.up();
-    }
-    else if(ev.keycode == 40){
+    } else if (ev.keyCode == 98) {
+        ev.preventDefault();
         bar.down();
+    } else if (ev.keyCode == 100) {
+        ev.preventDefault();
+        bar_2.up();
+    } else if (ev.keyCode == 98) {
+        ev.preventDefault();
+        bar_2.down();
+    } else if (ev.keyCode === 100) {
+        ev.preventDefault();
+        board.playing = !board.playing;
     }
-
-    console.log(""+bar);
 });
 
 
-self.addEventListener("load", main);
+board_view.draw();
+window.requestAnimationFrame(controller);
+setTimeout(function () {
+    ball.direction = -2;
+}, 5000);
 
-function main() {
-    console.log("Hola mundo");
-    console.log(board);
-    board_view.draw(); //dibuja todos los elementos
+function controller() {
+    board_view.play();
+    window.requestAnimationFrame(controller);
 }
+
